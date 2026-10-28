@@ -109,14 +109,16 @@ const seedAll = db.transaction(() => {
       if (latest <= start + 30) continue
       const time = hhmm(between(start + 30, latest))
       const lines = Array.from({ length: chance(0.35) ? between(2, 3) : 1 }, () => {
-        const menu = PRICES[pick(member.skills)]
+        const skill = pick(member.skills)
+        const menu = PRICES[skill]
         const [name, low, high] = menu[Math.floor(random() * random() * menu.length)]   // cheaper services are booked more often
-        return { name, amount: Math.round(between(low, high) / 50) * 50 }
+        const helper = chance(0.15) ? pick(STAFF.filter((other) => other.skills.includes(skill))) : member   // sometimes a colleague does one of the services
+        return { name, amount: Math.round(between(low, high) / 50) * 50, staff: chance(0.07) ? '' : helper.name }
       })
       const client = chance(0.4) ? CLIENTS[between(0, 13)] : pick(CLIENTS)
       const id = idFor(date, time, v)
       serviceIds.push(id)
-      insertService.run(id, client.name, client.phone, JSON.stringify(lines), member.name, lines.reduce((sum, l) => sum + l.amount, 0), chance(0.18) ? pick(REMARKS) : '', chance(0.3) ? 1 : 0, date, time)
+      insertService.run(id, client.name, client.phone, JSON.stringify(lines), Array.from(new Set(lines.map((l) => l.staff).filter(Boolean))).join(', '), lines.reduce((sum, l) => sum + l.amount, 0), chance(0.18) ? pick(REMARKS) : '', chance(0.3) ? 1 : 0, date, time)
     }
   }
 

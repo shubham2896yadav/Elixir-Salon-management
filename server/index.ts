@@ -222,13 +222,13 @@ type ServiceRow = {
   time: string
 }
 
-type TreatmentLine = { name: string; amount: number }
+type TreatmentLine = { name: string; amount: number; staff: string }   // staff is optional: '' means not assigned
 
 const toService = (row: ServiceRow) => ({
   id: row.id,
   client: row.client,
   phone: row.phone,
-  treatments: JSON.parse(row.treatments) as TreatmentLine[],
+  treatments: (JSON.parse(row.treatments) as (Omit<TreatmentLine, 'staff'> & { staff?: string })[]).map((line) => ({ ...line, staff: line.staff ?? row.staff })),   // older records had one team member for the whole visit
   staff: row.staff,
   amount: row.amount,
   remarks: row.remarks,
@@ -242,27 +242,29 @@ app.get('/api/services', (_req, res) => {
   res.json(rows.map(toService))
 })
 
-const parseServiceInput = (body: Record<string, unknown>, unchangedStaff?: string) => {
+const parseServiceInput = (body: Record<string, unknown>, unchangedStaff: string[] = []) => {
   const client = cleanText(body.client, LIMITS.client)
-  const staff = cleanText(body.staff, LIMITS.name)
   const remarks = optionalText(body.remarks, LIMITS.remarks)
   const lines = Array.isArray(body.treatments) ? body.treatments : null
   if (!client) return { error: `Client name is required (up to ${LIMITS.client} characters)` }
-  if (!staff) return { error: 'Team member is required' }
   if (!isValidPhone(body.phone)) return { error: 'Phone number must be exactly 10 digits' }
   if (remarks === null) return { error: `Remarks can be up to ${LIMITS.remarks} characters` }
   if (!lines || lines.length === 0 || lines.length > LIMITS.maxLines) return { error: `Add between 1 and ${LIMITS.maxLines} services` }
   const treatments: TreatmentLine[] = []
-  for (const line of lines as { name?: unknown; amount?: unknown }[]) {
+  for (const line of lines as { name?: unknown; amount?: unknown; staff?: unknown }[]) {
     const name = cleanText(line?.name, LIMITS.line)
     const amount = parseAmount(line?.amount)
     if (!name || amount === null) return { error: 'Each service needs a name and an amount above zero (up to ₹1,00,00,000)' }
-    treatments.push({ name, amount })
+    const rawStaff = line?.staff === undefined || line.staff === null ? '' : line.staff
+    if (typeof rawStaff !== 'string') return { error: 'Team member must be a name' }
+    const staffName = rawStaff.trim()
+    if (staffName && !unchangedStaff.includes(staffName) && !db.prepare('SELECT 1 FROM staff WHERE name = ?').get(staffName)) return { error: `Team member "${staffName}" does not exist` }
+    treatments.push({ name, amount, staff: staffName })
   }
+  const staff = Array.from(new Set(treatments.map((line) => line.staff).filter(Boolean))).join(', ')   // summary of who worked on the visit
   const date = body.date
   if (date !== undefined && !isRealDate(date)) return { error: 'date must be a real date like 2026-11-05' }
   if (typeof date === 'string' && !isTodayOrEarlier(date)) return { error: 'A service cannot be dated in the future' }
-  if (staff !== unchangedStaff && !db.prepare('SELECT 1 FROM staff WHERE name = ?').get(staff)) return { error: 'That team member does not exist' }
   return {
     value: {
       client,
@@ -302,7 +304,7 @@ app.patch('/api/services/:id', (req, res) => {
     res.status(404).json({ error: 'Service record not found' })
     return
   }
-  const parsed = parseServiceInput(req.body, existing.staff)
+  const parsed = parseServiceInput(req.body, toService(existing).treatments.map((line) => line.staff).filter(Boolean))
   if (!parsed.value) {
     res.status(400).json({ error: parsed.error })
     return
