@@ -115,8 +115,45 @@ html, body, #root { height: 100%; }
 .full-panel .period-toolbar { margin-top: 14px; }
 
 /* Per-service team member */
-.service-row-input .line-staff { grid-column: 1 / span 2; margin-top: 0; font-size: 12px; color: #7f7870; }
-.service-row-input { padding-bottom: 8px; border-bottom: 1px dashed #efe9e1; }
 .line-by { color: #a8a29d; font-weight: 400; font-size: 10px; }
 .view-toggle { margin-left: auto; }
 .service-table.team-breakdown .table-head, .service-table.team-breakdown .table-row { grid-template-columns: 1.5fr 1.1fr 1fr .6fr 1fr; min-width: 560px; }
+
+/* Service log form: header and footer stay in view, only the middle scrolls */
+.modal, .modal * { box-sizing: border-box; }
+.service-modal { width: min(600px, 100%); padding: 0; display: flex; flex-direction: column; overflow: hidden; max-height: min(92vh, 760px); }
+.service-modal .sm-head { padding: 26px 30px 14px; border-bottom: 1px solid #f1ede9; flex-shrink: 0; }
+.service-modal .sm-head h2 { margin: 6px 0 4px; }
+.service-modal .modal-copy { margin: 0; }
+.service-modal .sm-body { padding: 18px 30px 6px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+.service-modal .sm-foot { flex-shrink: 0; display: flex; align-items: center; gap: 16px; padding: 14px 30px 20px; border-top: 1px solid #f1ede9; background: #fff; }
+.service-modal .service-total { margin: 0; padding: 9px 14px; flex: 1; }
+.service-modal .modal-submit { width: auto; margin: 0; padding: 13px 26px; flex-shrink: 0; }
+.service-modal .modal label { margin-bottom: 0; }
+.service-modal .form-row { margin-bottom: 16px; }
+.sm-section { margin-bottom: 16px; }
+.sm-section-title { margin: 0 0 8px; font-size: 11px; color: #756e68; }
+.sm-lines-head, .service-row-input { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.1fr) 104px 24px; gap: 8px; align-items: center; }
+.sm-lines-head { font-size: 9px; letter-spacing: .8px; text-transform: uppercase; color: #afaaa4; padding: 0 2px 6px; }
+.sm-lines-head em { font-style: normal; text-transform: none; letter-spacing: 0; color: #c0bab3; }
+.service-modal .service-rows { gap: 8px; margin-top: 0; }
+.service-modal .service-row-input { padding: 0; border: 0; }
+.service-modal .service-row-input input, .service-modal .service-row-input select { margin-top: 0; font-size: 13px; }
+.service-modal .service-row-input select { color: #7f7870; }
+.amount-field { position: relative; }
+.amount-field span { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #a39a8c; font-size: 13px; pointer-events: none; }
+.service-modal .amount-field input { padding-left: 22px; text-align: right; }
+.service-modal .row-remove { width: 24px; height: 24px; padding: 0; display: grid; place-items: center; border-radius: 50%; }
+.service-modal .row-remove:hover { background: #f6ecec; }
+.add-row-button { margin-top: 10px; border: 1px dashed #d8cdbd; background: #fcfaf7; color: #8a7050; border-radius: 4px; padding: 9px 14px; font-size: 12px; width: 100%; }
+.add-row-button:hover { background: #f6f0e8; border-color: #b9a07e; }
+.review-check { display: flex; margin-bottom: 14px !important; padding: 10px 12px; background: #fcfaf7; border: 1px solid #f1ede9; border-radius: 4px; font-size: 12px !important; }
+@media (max-width: 560px) {
+  .service-modal .sm-head, .service-modal .sm-body, .service-modal .sm-foot { padding-left: 18px; padding-right: 18px; }
+  .service-modal .form-row { grid-template-columns: 1fr; }
+  .sm-lines-head { display: none; }
+  .service-modal .service-row-input { grid-template-columns: minmax(0, 1fr) 96px 24px; padding: 10px; border: 1px solid #f1ede9; border-radius: 6px; }
+  .service-modal .service-row-input .line-staff { grid-column: 1 / -1; grid-row: 2; }
+  .service-modal .sm-foot { flex-direction: column; align-items: stretch; }
+}
+.service-modal .form-row:has(> label:only-child) { grid-template-columns: 1fr; }
