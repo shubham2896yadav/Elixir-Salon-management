@@ -188,7 +188,8 @@ function App() {
     if (!reviewSettings.link) { alert('The Google review link is not set yet. Open Team & shifts (admin PIN) and use "Review message" to add it.'); return }
     if (!/^\d{10}$/.test(service.phone)) { alert('This visit has no valid phone number. Edit the visit to add one.'); return }
     const text = reviewMessageFor(service.client, reviewSettings.link, reviewSettings.message)
-    window.open(`https://wa.me/91${service.phone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener')   // opened straight from the click so the browser allows it
+    // api.whatsapp.com keeps emojis intact; the shorter wa.me address turns them into "�". Opened straight from the click so the browser allows it.
+    window.open(`https://api.whatsapp.com/send?phone=91${service.phone}&text=${encodeURIComponent(text)}`, '_blank', 'noopener')
     authFetch(`/api/services/${service.id}/review-request`, { method: 'POST' })
       .then((res) => res.ok ? res.json() : null)
       .then((saved: Service | null) => {
