@@ -1,4 +1,4 @@
-# Elixir Salon Management
+# Elixir Lounge Salon Management
 
 Attendance, team, clients, services and expenses for one salon. React front end, Express + SQLite back end, all in one folder. Data lives in one file: `server/salon.db`.
 
