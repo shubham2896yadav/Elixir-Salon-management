@@ -320,16 +320,38 @@ app.patch('/api/services/:id', (req, res) => {
   res.json({ id, client, phone, treatments, staff, amount, remarks, googleReview, date: nextDate, time: existing.time, reviewRequested: existing.review_requested })
 })
 
-// Remembers that a review link was sent for this visit, so the receptionist can see it and not ask twice.
+// A customer (identified by phone number) is asked for a review once. The first request is recorded on that visit;
+// any later request for the same number, from any visit, is refused. Done here so two open tabs cannot both send.
 app.post('/api/services/:id/review-request', (req, res) => {
   const id = Number(req.params.id)
-  if (!db.prepare('SELECT 1 FROM services WHERE id = ?').get(id)) {
+  const visit = db.prepare('SELECT * FROM services WHERE id = ?').get(id) as ServiceRow | undefined
+  if (!visit) {
     res.status(404).json({ error: 'Service record not found' })
+    return
+  }
+  if (!/^\d{10}$/.test(visit.phone)) {
+    res.status(400).json({ error: 'This visit has no valid phone number' })
+    return
+  }
+  const earlier = db.prepare("SELECT review_requested FROM services WHERE phone = ? AND review_requested != '' ORDER BY review_requested LIMIT 1").get(visit.phone) as { review_requested: string } | undefined
+  if (earlier) {
+    res.status(409).json({ error: `This customer was already sent the review link on ${earlier.review_requested}`, sentOn: earlier.review_requested })
     return
   }
   const now = new Date()
   db.prepare('UPDATE services SET review_requested = ? WHERE id = ?').run(`${localDate(now)} ${localTime(now)}`, id)
   res.json(toService(db.prepare('SELECT * FROM services WHERE id = ?').get(id) as ServiceRow))
+})
+
+// Admin only: forget that this customer was asked (for example if the message was never actually sent).
+app.delete('/api/services/:id/review-request', requireAdmin, (req, res) => {
+  const visit = db.prepare('SELECT phone FROM services WHERE id = ?').get(Number(req.params.id)) as { phone: string } | undefined
+  if (!visit) {
+    res.status(404).json({ error: 'Service record not found' })
+    return
+  }
+  const result = visit.phone ? db.prepare("UPDATE services SET review_requested = '' WHERE phone = ?").run(visit.phone) : { changes: 0 }
+  res.json({ phone: visit.phone, cleared: result.changes })
 })
 
 // WhatsApp bolds with single asterisks. {name} and {link} are filled in when the message is sent.

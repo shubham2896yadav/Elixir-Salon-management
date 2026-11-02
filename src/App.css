@@ -202,3 +202,6 @@ html, body, #root { height: 100%; }
 .wa-button.sent { background: #e3f6ea; color: #1c8a45; box-shadow: none; border: 1px solid #bfe8cd; }
 .wa-button.sent:hover { background: #d2f0dd; }
 .wa-none { font-size: 10px; color: #c0bab3; text-align: center; }
+.wa-button:disabled { cursor: default; }
+.review-send.done { background: #e3f6ea; border-color: #bfe8cd; color: #1c8a45; cursor: default; }
+.review-status .text-button { font-size: 11px; margin-left: 4px; text-decoration: underline; }
