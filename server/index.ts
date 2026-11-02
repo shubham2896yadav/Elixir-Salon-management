@@ -332,9 +332,11 @@ app.post('/api/services/:id/review-request', (req, res) => {
   res.json(toService(db.prepare('SELECT * FROM services WHERE id = ?').get(id) as ServiceRow))
 })
 
-const DEFAULT_REVIEW_MESSAGE = 'Hi {name}, thank you for visiting Elixir Salon! It would mean a lot to us if you could take a minute to leave a Google review: {link}'
+// WhatsApp bolds with single asterisks. {name} and {link} are filled in when the message is sent.
+const DEFAULT_REVIEW_LINK = 'https://g.page/r/CQRMuYaMpjEAEAE/review'
+const DEFAULT_REVIEW_MESSAGE = "Hi {name}! 💖\n\nHope you loved your experience at *Elixir Lounge*! ✨\n\nWe'd love to know how we did. Your little feedback means the world to us! 🥰\n\nShare your experience with us here ⭐\n{link}\n\nLots of love,\n*Team Elixir Lounge* 🤍"
 const getSetting = (key: string) => (db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined)?.value
-const reviewSettings = () => ({ link: getSetting('review_link') ?? '', message: getSetting('review_message') ?? DEFAULT_REVIEW_MESSAGE })
+const reviewSettings = () => ({ link: getSetting('review_link') ?? DEFAULT_REVIEW_LINK, message: getSetting('review_message') ?? DEFAULT_REVIEW_MESSAGE })
 
 app.get('/api/review-settings', (_req, res) => {
   res.json(reviewSettings())
