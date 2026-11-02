@@ -170,3 +170,10 @@ function ensureServicesTable() {
 }
 
 ensureServicesTable()
+
+// when someone last pressed "Send review link" for this visit ('' = never), as "YYYY-MM-DD HH:MM"
+function ensureReviewRequestedColumn() {
+  const columns = (db.prepare(`PRAGMA table_info(services)`).all() as { name: string }[]).map((column) => column.name)
+  if (!columns.includes('review_requested')) db.exec(`ALTER TABLE services ADD COLUMN review_requested TEXT NOT NULL DEFAULT ''`)
+}
+ensureReviewRequestedColumn()

@@ -220,6 +220,7 @@ type ServiceRow = {
   google_review: number
   date: string
   time: string
+  review_requested: string
 }
 
 type TreatmentLine = { name: string; amount: number; staff: string }   // staff is optional: '' means not assigned
@@ -235,6 +236,7 @@ const toService = (row: ServiceRow) => ({
   googleReview: Boolean(row.google_review),
   date: row.date,
   time: row.time,
+  reviewRequested: row.review_requested,
 })
 
 app.get('/api/services', (_req, res) => {
@@ -294,7 +296,7 @@ app.post('/api/services', (req, res) => {
     INSERT INTO services (id, client, phone, treatments, staff, amount, remarks, google_review, date, time)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(id, client, phone, JSON.stringify(treatments), staff, amount, remarks, googleReview ? 1 : 0, date, time)
-  res.status(201).json({ id, client, phone, treatments, staff, amount, remarks, googleReview, date, time })
+  res.status(201).json({ id, client, phone, treatments, staff, amount, remarks, googleReview, date, time, reviewRequested: '' })
 })
 
 app.patch('/api/services/:id', (req, res) => {
@@ -315,7 +317,43 @@ app.patch('/api/services/:id', (req, res) => {
     UPDATE services SET client = ?, phone = ?, treatments = ?, staff = ?, amount = ?, remarks = ?, google_review = ?, date = ?
     WHERE id = ?
   `).run(client, phone, JSON.stringify(treatments), staff, amount, remarks, googleReview ? 1 : 0, nextDate, id)
-  res.json({ id, client, phone, treatments, staff, amount, remarks, googleReview, date: nextDate, time: existing.time })
+  res.json({ id, client, phone, treatments, staff, amount, remarks, googleReview, date: nextDate, time: existing.time, reviewRequested: existing.review_requested })
+})
+
+// Remembers that a review link was sent for this visit, so the receptionist can see it and not ask twice.
+app.post('/api/services/:id/review-request', (req, res) => {
+  const id = Number(req.params.id)
+  if (!db.prepare('SELECT 1 FROM services WHERE id = ?').get(id)) {
+    res.status(404).json({ error: 'Service record not found' })
+    return
+  }
+  const now = new Date()
+  db.prepare('UPDATE services SET review_requested = ? WHERE id = ?').run(`${localDate(now)} ${localTime(now)}`, id)
+  res.json(toService(db.prepare('SELECT * FROM services WHERE id = ?').get(id) as ServiceRow))
+})
+
+const DEFAULT_REVIEW_MESSAGE = 'Hi {name}, thank you for visiting Elixir Salon! It would mean a lot to us if you could take a minute to leave a Google review: {link}'
+const getSetting = (key: string) => (db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined)?.value
+const reviewSettings = () => ({ link: getSetting('review_link') ?? '', message: getSetting('review_message') ?? DEFAULT_REVIEW_MESSAGE })
+
+app.get('/api/review-settings', (_req, res) => {
+  res.json(reviewSettings())
+})
+
+app.put('/api/review-settings', requireAdmin, (req, res) => {
+  const body = (req.body ?? {}) as Record<string, unknown>
+  const link = typeof body.link === 'string' ? body.link.trim() : null
+  const message = cleanText(body.message, LIMITS.remarks)
+  if (link === null) return void res.status(400).json({ error: 'The review link must be text' })
+  if (link) {
+    let valid = link.length <= 500
+    try { valid = valid && new URL(link).protocol === 'https:' } catch { valid = false }
+    if (!valid) return void res.status(400).json({ error: 'The review link must start with https:// (copy it from your Google Business Profile)' })
+  }
+  if (!message) return void res.status(400).json({ error: `The message is required (up to ${LIMITS.remarks} characters)` })
+  const save = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+  db.transaction(() => { save.run('review_link', link); save.run('review_message', message) })()
+  res.json(reviewSettings())
 })
 
 app.delete('/api/services/:id', (req, res) => {

@@ -38,6 +38,7 @@ Do these once on the salon Mac:
 - **Who did each service:** every line of a service has an optional team member. Leave it blank if you don't want to record it. To review someone's work (for incentives), unlock **Team & shifts**, press **Services done** on their card, and pick Week, Month or a Custom date range. You get every service they did with its price, and a total. Picking a team member in the Services filter also shows just the lines they did.
 - **A particular day:** on Services pick **Day**, then use the arrows or the date box to jump to any date.
 - **Appointments** can carry a contact number and notes (stylist preference, allergies, anything to remember). Both are optional.
+- **Google review requests:** the admin sets the review link and wording once (Team & shifts → **Review message**). After that, open any visit that has a phone number and press **Send review link on WhatsApp**: WhatsApp opens with the customer's number and the message ready, and you press Send. The visit then shows when the link was sent. This needs WhatsApp Web or the WhatsApp desktop app signed in on the salon laptop.
 - **Sample data:** `npm run seed-demo` fills every screen with fictional data so you can look around. `npm run clear-demo` removes only that sample data and leaves anything you entered yourself.
 
 ## Backups
