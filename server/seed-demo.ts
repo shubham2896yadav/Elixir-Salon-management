@@ -144,7 +144,8 @@ const seedAll = db.transaction(() => {
   }
 
   // ---- appointments: today, the next two weeks, and a few that already happened ----
-  const insertAppointment = db.prepare('INSERT INTO appointments (id, client, date, time, service) VALUES (?, ?, ?, ?, ?)')
+  const insertAppointment = db.prepare('INSERT INTO appointments (id, client, phone, date, time, service, notes) VALUES (?, ?, ?, ?, ?, ?, ?)')
+  const APPOINTMENT_NOTES = ['Prefers Kavita', 'Allergic to ammonia colour, patch test first', 'Bringing a friend, book two chairs', 'Call to confirm the day before', 'Wants the same style as last time', 'Running late on weekdays, usually after 6', '']
   const bookings: [number, string, string][] = [
     [0, '11:00', 'Haircut and beard trim'], [0, '15:00', 'Facial and cleanup'], [0, '17:30', 'Hair colour touch-up'],
     [1, '10:30', 'Bridal makeup trial'], [1, '12:00', 'Hair spa'], [1, '16:00', 'Manicure and pedicure'],
@@ -156,7 +157,8 @@ const seedAll = db.transaction(() => {
     const date = addDays(today, offset)
     const id = idFor(date, time)
     appointmentIds.push(id)
-    insertAppointment.run(id, pick(CLIENTS).name, date, time, service)
+    const who = pick(CLIENTS)
+    insertAppointment.run(id, who.name, who.phone, date, time, service, pick(APPOINTMENT_NOTES))
   }
 
   db.prepare(`INSERT INTO settings (key, value) VALUES ('demo_ids', ?)`).run(JSON.stringify({ staff: staffIds, services: serviceIds, expenses: expenseIds, appointments: appointmentIds }))

@@ -36,6 +36,8 @@ Do these once on the salon Mac:
 - **Team & shifts** (adding or editing staff, the monthly attendance report and attendance time corrections) needs the admin PIN, so staff cannot change attendance records or shifts. Use **Lock admin** in the sidebar when you are done. A PIN session ends when you close the browser tab or after 12 hours without use; five wrong PINs lock the PIN screen for one minute.
 - Forgot the PIN? In the folder, run `npm run reset-pin`, then open Team & shifts and create a new one. Your data is not affected.
 - **Who did each service:** every line of a service has an optional team member. Leave it blank if you don't want to record it. To review someone's work (for incentives), unlock **Team & shifts**, press **Services done** on their card, and pick Week, Month or a Custom date range. You get every service they did with its price, and a total. Picking a team member in the Services filter also shows just the lines they did.
+- **A particular day:** on Services pick **Day**, then use the arrows or the date box to jump to any date.
+- **Appointments** can carry a contact number and notes (stylist preference, allergies, anything to remember). Both are optional.
 - **Sample data:** `npm run seed-demo` fills every screen with fictional data so you can look around. `npm run clear-demo` removes only that sample data and leaves anything you entered yourself.
 
 ## Backups

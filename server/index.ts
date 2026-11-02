@@ -386,16 +386,19 @@ app.delete('/api/expenses/:id', (req, res) => {
   res.json({ id: Number(req.params.id) })
 })
 
-type AppointmentRow = { id: number; client: string; date: string; time: string; service: string }
+type AppointmentRow = { id: number; client: string; phone: string; date: string; time: string; service: string; notes: string }
 
 const parseAppointmentInput = (body: Record<string, unknown>) => {
   const client = cleanText(body.client, LIMITS.client)
   const service = cleanText(body.service, LIMITS.service)
+  const notes = optionalText(body.notes, LIMITS.remarks)
   if (!client) return { error: `Client name is required (up to ${LIMITS.client} characters)` }
+  if (!isValidPhone(body.phone)) return { error: 'Contact number must be exactly 10 digits' }
+  if (notes === null) return { error: `Notes can be up to ${LIMITS.remarks} characters` }
   if (!service) return { error: `Service wanted is required (up to ${LIMITS.service} characters)` }
   if (!isRealDate(body.date)) return { error: 'date must be a real date like 2026-11-05' }
   if (typeof body.time !== 'string' || !TIME_PATTERN.test(body.time)) return { error: 'time must look like HH:MM' }
-  return { value: { client, service, date: body.date, time: body.time } }
+  return { value: { client, phone: typeof body.phone === 'string' ? body.phone : '', service, date: body.date, time: body.time, notes } }
 }
 
 app.get('/api/appointments', (_req, res) => {
@@ -408,14 +411,14 @@ app.post('/api/appointments', (req, res) => {
     res.status(400).json({ error: parsed.error })
     return
   }
-  const { client, service, date, time } = parsed.value
+  const { client, phone, service, date, time, notes } = parsed.value
   if (date < localDate(new Date())) {
     res.status(400).json({ error: 'An appointment cannot be booked for a past date' })
     return
   }
   const id = nextId()
-  db.prepare('INSERT INTO appointments (id, client, date, time, service) VALUES (?, ?, ?, ?, ?)').run(id, client, date, time, service)
-  res.status(201).json({ id, client, date, time, service })
+  db.prepare('INSERT INTO appointments (id, client, phone, date, time, service, notes) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, client, phone, date, time, service, notes)
+  res.status(201).json({ id, client, phone, date, time, service, notes })
 })
 
 app.patch('/api/appointments/:id', (req, res) => {
@@ -430,13 +433,13 @@ app.patch('/api/appointments/:id', (req, res) => {
     res.status(400).json({ error: parsed.error })
     return
   }
-  const { client, service, date, time } = parsed.value
+  const { client, phone, service, date, time, notes } = parsed.value
   if (date !== existing.date && date < localDate(new Date())) {
     res.status(400).json({ error: 'An appointment cannot be moved to a past date' })
     return
   }
-  db.prepare('UPDATE appointments SET client = ?, date = ?, time = ?, service = ? WHERE id = ?').run(client, date, time, service, id)
-  res.json({ id, client, date, time, service })
+  db.prepare('UPDATE appointments SET client = ?, phone = ?, date = ?, time = ?, service = ?, notes = ? WHERE id = ?').run(client, phone, date, time, service, notes, id)
+  res.json({ id, client, phone, date, time, service, notes })
 })
 
 app.delete('/api/appointments/:id', (req, res) => {

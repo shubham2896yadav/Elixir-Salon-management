@@ -172,3 +172,10 @@ html, body, #root { height: 100%; }
 .done-panel > .monthly-summary { margin: 12px 0 4px; padding: 10px 16px; }
 .done-panel > .service-table { margin-top: 0; }
 .done-panel .table-row { padding: 8px; }
+
+/* Services: day view picker; appointments: contact and notes */
+.period-nav .day-picker { border: 1px solid #e8e2da; border-radius: 4px; padding: 5px 8px; font-size: 12px; color: #4c4742; background: #fff; }
+.appointment-phone { margin-left: 8px; font-weight: 400; color: #a8a29d; font-size: 10px; letter-spacing: .3px; }
+.appointment-notes { display: block; margin-top: 4px; font-style: normal; font-size: 10px; color: #9a8c78; background: #f9f6f2; border-left: 2px solid #d8cdbd; padding: 3px 8px; border-radius: 0 3px 3px 0; max-width: 480px; }
+.notes-input { width: 100%; box-sizing: border-box; border: 1px solid #e8e2da; border-radius: 4px; padding: 10px; margin-top: 6px; font: inherit; font-size: 12px; color: #4c4742; resize: vertical; outline: none; }
+.notes-input:focus { border-color: #ab9274; box-shadow: 0 0 0 3px #f4efe9; }

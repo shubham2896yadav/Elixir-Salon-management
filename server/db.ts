@@ -43,12 +43,20 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS appointments (
     id INTEGER PRIMARY KEY,
     client TEXT NOT NULL,
+    phone TEXT NOT NULL DEFAULT '',
     date TEXT NOT NULL,
     time TEXT NOT NULL,
-    service TEXT NOT NULL
+    service TEXT NOT NULL,
+    notes TEXT NOT NULL DEFAULT ''
   );
   CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments (date, time);
 `)
+
+function ensureAppointmentColumns() {
+  const columns = (db.prepare(`PRAGMA table_info(appointments)`).all() as { name: string }[]).map((column) => column.name)
+  if (!columns.includes('phone')) db.exec(`ALTER TABLE appointments ADD COLUMN phone TEXT NOT NULL DEFAULT ''`)
+  if (!columns.includes('notes')) db.exec(`ALTER TABLE appointments ADD COLUMN notes TEXT NOT NULL DEFAULT ''`)
+}
 
 function ensureExpensesDateColumn() {
   const columns = db.prepare(`PRAGMA table_info(expenses)`).all() as { name: string }[]
@@ -64,6 +72,7 @@ function ensureExpensesDateColumn() {
 }
 
 ensureExpensesDateColumn()
+ensureAppointmentColumns()
 
 function migrateLegacyAttendanceTable() {
   const legacyTable = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'attendance'`).get()
