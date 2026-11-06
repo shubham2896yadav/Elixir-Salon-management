@@ -53,6 +53,8 @@ function App() {
   const [showStaffForm, setShowStaffForm] = useState(false)
   const [editingStaffId, setEditingStaffId] = useState<number | null>(null)
   const [showServiceForm, setShowServiceForm] = useState(false)
+  const [clientLookupOpen, setClientLookupOpen] = useState(false)
+  const [clientLookupIndex, setClientLookupIndex] = useState(0)
   const [reviewSettings, setReviewSettings] = useState({ link: '', message: '' })
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [reviewDraft, setReviewDraft] = useState({ link: '', message: '' })
@@ -428,6 +430,28 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [services])
   const selectedClient = clientSummaries.find((client) => client.key === viewingClientKey) || null
+  // typing a name in "Record a service" suggests people already on file (from past visits, and from appointments for people who haven't visited yet)
+  const clientMatches = useMemo(() => {
+    const query = newService.client.trim().toLowerCase()
+    if (!showServiceForm || editingServiceId || !query) return []
+    const known = new Set(clientSummaries.map((client) => client.key))
+    const fromAppointments: ClientSummary[] = []
+    for (const item of appointments) {
+      const key = (item.phone && item.phone.trim()) || item.client.trim().toLowerCase()
+      if (known.has(key)) continue
+      known.add(key)
+      fromAppointments.push({ key, name: item.client.trim(), phone: item.phone, visitCount: 0, totalSpent: 0, lastVisitDate: '' })
+    }
+    return [...clientSummaries, ...fromAppointments]
+      .filter((client) => client.name.toLowerCase().includes(query) && !(client.name.toLowerCase() === query && client.phone === newService.phone))
+      .sort((a, b) => Number(b.name.toLowerCase().startsWith(query)) - Number(a.name.toLowerCase().startsWith(query)) || b.lastVisitDate.localeCompare(a.lastVisitDate))
+      .slice(0, 6)
+  }, [showServiceForm, editingServiceId, newService.client, newService.phone, clientSummaries, appointments])
+  const pickClient = (client: ClientSummary) => {
+    setNewService((current) => ({ ...current, client: client.name, phone: client.phone || current.phone }))
+    setClientLookupOpen(false)
+    setClientLookupIndex(0)
+  }
   const clientServiceHistory = useMemo(
     () => viewingClientKey ? services.filter((service) => clientKeyFor(service) === viewingClientKey) : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -696,7 +720,13 @@ function App() {
       {showServiceForm && <div className="modal-backdrop"><form className="modal service-modal" onSubmit={submitService}>
         <div className="sm-head"><button type="button" className="modal-close" onClick={() => setShowServiceForm(false)}>x</button><p className="eyebrow">SERVICE LOG</p><h2>{editingServiceId ? 'Edit service' : 'Record a service'}</h2><p className="modal-copy">{editingServiceId ? 'Correct any detail of this visit.' : 'Add the client, what they had done, and who did it.'}</p></div>
         <div className="sm-body">
-          <div className="form-row"><label>Client name *<input required maxLength={100} pattern=".*\S.*" title="Please enter a value (not just spaces)" autoFocus value={newService.client} onChange={(event) => setNewService({ ...newService, client: event.target.value })} placeholder="e.g. Anika Mehta" /></label><label>Phone number<input type="tel" inputMode="numeric" maxLength={10} pattern="\d{10}" title="Enter a 10-digit phone number" value={newService.phone} onChange={(event) => setNewService({ ...newService, phone: event.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10 digits" /></label></div>
+          <div className="form-row"><label className="client-lookup">Client name *<input required maxLength={100} pattern=".*\S.*" title="Please enter a value (not just spaces)" autoFocus autoComplete="off" role="combobox" aria-expanded={clientLookupOpen && clientMatches.length > 0} value={newService.client} onChange={(event) => { setNewService({ ...newService, client: event.target.value }); setClientLookupOpen(true); setClientLookupIndex(0) }} onFocus={() => setClientLookupOpen(true)} onBlur={() => setClientLookupOpen(false)} onKeyDown={(event) => {
+            if (!clientLookupOpen || clientMatches.length === 0) return
+            if (event.key === 'ArrowDown') { event.preventDefault(); setClientLookupIndex((clientLookupIndex + 1) % clientMatches.length) }
+            else if (event.key === 'ArrowUp') { event.preventDefault(); setClientLookupIndex((clientLookupIndex - 1 + clientMatches.length) % clientMatches.length) }
+            else if (event.key === 'Enter') { event.preventDefault(); pickClient(clientMatches[Math.min(clientLookupIndex, clientMatches.length - 1)]) }
+            else if (event.key === 'Escape') { event.stopPropagation(); setClientLookupOpen(false) }
+          }} placeholder="Type a name to find an existing client" />{clientLookupOpen && clientMatches.length > 0 && <ul className="lookup-list" role="listbox">{clientMatches.map((client, index) => <li key={client.key} role="option" aria-selected={index === clientLookupIndex} className={index === clientLookupIndex ? 'active' : ''} onMouseDown={(event) => { event.preventDefault(); pickClient(client) }} onMouseEnter={() => setClientLookupIndex(index)}><strong>{client.name}</strong><span>{client.phone || 'no phone'}</span><small>{client.visitCount > 0 ? `${client.visitCount} visit${client.visitCount === 1 ? '' : 's'} · last ${formatShortDate(client.lastVisitDate)}` : 'from appointments'}</small></li>)}</ul>}</label><label>Phone number<input type="tel" inputMode="numeric" maxLength={10} pattern="\d{10}" title="Enter a 10-digit phone number" value={newService.phone} onChange={(event) => setNewService({ ...newService, phone: event.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10 digits" /></label></div>
           <div className="sm-section"><p className="sm-section-title">Services taken *</p>
             <div className="sm-lines-head"><span>Service</span><span>Done by <em>optional</em></span><span>Amount</span><span></span></div>
             <div className="service-rows">{newService.serviceRows.map((row, index) => <div className="service-row-input" key={index}><input required={index === 0} maxLength={100} value={row.name} onChange={(event) => updateServiceRow(index, { name: event.target.value })} placeholder="e.g. Haircut" aria-label={`Service ${index + 1} name`} /><select className="line-staff" aria-label={`Team member for service ${index + 1}`} value={row.staff} onChange={(event) => updateServiceRow(index, { staff: event.target.value })}><option value="">Not recorded</option>{staff.map((member) => <option key={member.id}>{member.name}</option>)}{row.staff && !staff.some((member) => member.name === row.staff) && <option>{row.staff}</option>}</select><div className="amount-field"><span>₹</span><input required={index === 0} type="text" inputMode="numeric" maxLength={8} value={row.amount} onChange={(event) => updateServiceRow(index, { amount: event.target.value.replace(/\D/g, '') })} placeholder="0" aria-label={`Service ${index + 1} amount`} /></div>{newService.serviceRows.length > 1 ? <button type="button" className="row-remove" aria-label={`Remove service ${index + 1}`} onClick={() => removeServiceRow(index)}>×</button> : <span></span>}</div>)}</div>
